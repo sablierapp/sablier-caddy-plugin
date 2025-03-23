@@ -1,17 +1,12 @@
-name: Build
+name: CI
 
 on:
-  push:
-    branches:
-      - main
-      - beta
   pull_request:
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-
   build:
     name: Build
     permissions:
@@ -25,14 +20,11 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v4
 
-    - name: Set up Go 1.24
+    - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: ^1.24
+        go-version-file: go.mod
         cache-dependency-path: go.sum
-
-    - name: Build
-      run: make
 
     - name: Test
       run: go test -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool go-junit-report -parser gojson -set-exit-code > junit.xml
@@ -58,33 +50,3 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         file: junit.xml
         disable-search: true
-
-    # TODO: Download release asset action with cache
-    - name: Download latest released Sablier binary
-      if: ${{ !cancelled() }}
-      id: latest-release
-      run: |
-        release_data=$(curl -s https://api.github.com/repos/sablierapp/sablier/releases/latest)
-        artifact_url=$(echo $release_data | jq -r '.assets[] | select(.name | contains("linux-amd64")) | .browser_download_url')
-        version=$(echo $release_data | jq -r '.tag_name')
-        wget -q $artifact_url -O sablier_${version}_linux-amd64
-        echo "artifact_path=sablier_${version}_linux-amd64" >> $GITHUB_OUTPUT
-
-    - name: Compare the downloaded binary with the built binary
-      if: ${{ !cancelled() }}
-      id: diff
-      run: |
-        go tool gsa -o diff.txt ${{ steps.latest-release.outputs.artifact_path }} sablier_draft_linux-amd64
-        echo "diff<<EOF" >> $GITHUB_OUTPUT
-        echo "$(cat diff.txt)" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
-
-    - name: Comment diff on pull request
-      if: ${{ !cancelled() }}
-      uses: thollander/actions-comment-pull-request@v3
-      with:
-        message: |
-          ```
-          ${{ steps.diff.outputs.diff }}
-          ```
-        comment-tag: go-binary-diff
