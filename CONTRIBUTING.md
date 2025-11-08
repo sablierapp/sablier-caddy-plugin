@@ -21,4 +21,4 @@ Thank you for helping improve this project! 🙌
 
 ### Installing golangci-lint
 
-Install golangci-lint by following the [official installation guide](https://golangci-lint.run/usage/install/):
+Install golangci-lint by following the [official installation guide](https://golangci-lint.run/docs/welcome/install/#local-installation)
