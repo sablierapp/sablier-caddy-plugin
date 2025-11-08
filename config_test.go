@@ -9,7 +9,7 @@ import (
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
-	"github.com/sablierapp/sablier/plugins/caddy"
+	"github.com/sablierapp/sablier-caddy-plugin"
 )
 
 var fals bool = false
