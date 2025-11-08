@@ -9,7 +9,7 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	plugin "github.com/sablierapp/sablier/plugins/caddy"
+	plugin "github.com/sablierapp/sablier-caddy-plugin"
 )
 
 func TestSablierMiddleware_ServeHTTP(t *testing.T) {
