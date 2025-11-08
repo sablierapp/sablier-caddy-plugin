@@ -2,7 +2,7 @@ package caddy_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -78,8 +78,9 @@ func TestSablierMiddleware_ServeHTTP(t *testing.T) {
 				for key, value := range tt.sablier.headers {
 					w.Header().Add(key, value)
 				}
-				w.Write([]byte(tt.sablier.body))
+				_, _ = w.Write([]byte(tt.sablier.body))
 			}))
+			//nolint:errcheck
 			defer sablierMockServer.Close()
 
 			tt.fields.SablierMiddleware.Config.SablierURL = sablierMockServer.URL
@@ -92,11 +93,15 @@ func TestSablierMiddleware_ServeHTTP(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/my-nginx", nil)
 			w := httptest.NewRecorder()
 
-			tt.fields.SablierMiddleware.ServeHTTP(w, req, tt.fields.Next)
+			err = tt.fields.SablierMiddleware.ServeHTTP(w, req, tt.fields.Next)
+			if err != nil {
+				panic(err)
+			}
 
 			res := w.Result()
+			//nolint:errcheck
 			defer res.Body.Close()
-			data, err := ioutil.ReadAll(res.Body)
+			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Errorf("expected error to be nil got %v", err)
 			}

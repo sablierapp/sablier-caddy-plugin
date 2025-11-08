@@ -30,7 +30,6 @@ func (SablierMiddleware) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *SablierMiddleware) Provision(ctx caddy.Context) error {
 	req, err := m.Config.BuildRequest()
-
 	if err != nil {
 		return err
 	}
@@ -48,22 +47,23 @@ func (sm SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request,
 	resp, err := sm.client.Do(sablierRequest)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return nil
+		return err
 	}
+	//nolint:errcheck
 	defer resp.Body.Close()
 
 	if resp.Header.Get("X-Sablier-Session-Status") == "ready" {
-		next.ServeHTTP(rw, req)
-	} else {
-		forward(resp, rw)
+		return next.ServeHTTP(rw, req)
 	}
-	return nil
+
+	return forward(resp, rw)
 }
 
-func forward(resp *http.Response, rw http.ResponseWriter) {
+func forward(resp *http.Response, rw http.ResponseWriter) error {
 	rw.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
 	rw.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
-	io.Copy(rw, resp.Body)
+	_, err := io.Copy(rw, resp.Body)
+	return err
 }
 
 // Interface guards
