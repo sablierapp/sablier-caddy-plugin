@@ -1,36 +1,30 @@
+<!-- omit in toc -->
 # Caddy Sablier Plugin
 
-- [Caddy Sablier Plugin](#caddy-sablier-plugin)
-	- [Build the custom Caddy image with Sablier middleware in it](#build-the-custom-caddy-image-with-sablier-middleware-in-it)
-		- [By using the provided Dockerfile](#by-using-the-provided-dockerfile)
-		- [By updating your Caddy Dockerfile](#by-updating-your-caddy-dockerfile)
-	- [Configuration](#configuration)
-		- [Exemple with a minimal configuration](#exemple-with-a-minimal-configuration)
-	- [Running end-to-end tests](#running-end-to-end-tests)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sablierapp/sablier-caddy-plugin)](https://goreportcard.com/report/github.com/sablierapp/sablier-caddy-plugin) 
 
-## Build the custom Caddy image with Sablier middleware in it
+Start your containers on demand, shut them down automatically when there's no activity using Caddy.
 
-In order to use the custom plugin for Caddy, you need to bundle it with Caddy.
-Here I'll show you two options with Docker.
+- [Installation](#installation)
+- [Configuration](#configuration)
+	- [Exemple with a minimal configuration](#exemple-with-a-minimal-configuration)
 
-### By using the provided Dockerfile
+See the [official module page](https://caddyserver.com/docs/modules/http.handlers.sablier#github.com/sablierapp/sablier-caddy-plugin).
 
-```bash
-docker build https://github.com/sablierapp/sablier.git#v1.10.1:plugins/caddy -t caddy:with-sablier
-```
+## Installation
 
-**Note:** You can change `main` for any other branch (such as `beta`, or tags `v1.10.1`)
+This plugin does not come with a pre-built version of Caddy (see [#10](https://github.com/sablierapp/sablier-caddy-plugin/issues/10)).
 
-### By updating your Caddy Dockerfile
+You must build a custom version of Caddy with this plugin. See [](https://caddyserver.com/docs/build#xcaddy) for more information.
+
 
 ```Dockerfile
-ARG CADDY_VERSION=2.9.1
-FROM caddy:${CADDY_VERSION}-builder AS builder
+FROM caddy:2.10.2-builder AS builder
 
 RUN xcaddy build \
-    --with github.com/sablierapp/sablier/plugins/caddy
+    --with github.com/sablierapp/sablier-caddy-plugin:v1.1.0 # x-release-please-version
 
-FROM caddy:${CADDY_VERSION}
+FROM caddy:2.10.2
 
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy
 ```
@@ -76,12 +70,3 @@ Almost all options are optional and you can setup very simple rules to use the s
   }
 }
 ```
-
-## Running end-to-end tests
-
-1. Build local sablier
-  `docker build -t caddy:local .`
-2. Build local caddy
-  `docker build -t sablierapp/sablier:local ../..`
-3. Run test
-  `cd e2e/docker && bash ./run.sh`
