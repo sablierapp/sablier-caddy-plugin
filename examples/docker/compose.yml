@@ -1,0 +1,27 @@
+services:
+  caddy:
+    image: sablierapp/sablier-caddy-plugin:local
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+
+  sablier:
+    image: sablierapp/sablier:1.10.1
+    command:
+      - start
+      - --provider.name=docker
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+
+  mimic:
+    image: sablierapp/mimic:v0.3.1
+    healthcheck:
+      test: [ "CMD", "/mimic", "healthcheck"]
+      interval: 5s
+    labels:
+      - sablier.enable=true
+      - sablier.group=mimic

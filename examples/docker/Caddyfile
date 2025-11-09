@@ -1,0 +1,13 @@
+:80 {
+	route /* {
+        sablier http://sablier:10000 {
+            group mimic
+            session_duration 1m
+            dynamic {
+                display_name Mimic
+                theme hacker-terminal
+            }
+        }
+        reverse_proxy mimic:80
+    }
+}
