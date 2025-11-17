@@ -28,7 +28,7 @@ You must build a custom version of [Caddy](https://caddyserver.com) with this pl
 FROM caddy:2.10.2-builder AS builder
 
 RUN xcaddy build \
-    --with github.com/sablierapp/sablier-caddy-plugin:v1.0.1 # x-release-please-version
+    --with github.com/sablierapp/sablier-caddy-plugin@v1.0.1 # x-release-please-version
 
 FROM caddy:2.10.2
 
