@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/sablierapp/sablier-caddy-plugin/compare/v1.0.1...v1.0.2) (2025-11-17)
+
+
+### Documentation
+
+* fix example syntax ([#13](https://github.com/sablierapp/sablier-caddy-plugin/issues/13)) ([def8d76](https://github.com/sablierapp/sablier-caddy-plugin/commit/def8d76ccdfd9048131663ec4ea515d603f3303c))
+
 ## [1.0.1](https://github.com/sablierapp/sablier-caddy-plugin/compare/v1.0.0...v1.0.1) (2025-11-09)
 
 
