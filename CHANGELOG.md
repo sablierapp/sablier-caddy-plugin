@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.0.2](https://github.com/sablierapp/sablier-caddy-plugin/compare/v1.0.1...v1.0.2) (2025-11-24)
+
+
+### Documentation
+
+* fix example syntax ([#13](https://github.com/sablierapp/sablier-caddy-plugin/issues/13)) ([def8d76](https://github.com/sablierapp/sablier-caddy-plugin/commit/def8d76ccdfd9048131663ec4ea515d603f3303c))
+
+
+### Chores
+
+* **deps:** bump actions/checkout from 5.0.0 to 6.0.0 ([#17](https://github.com/sablierapp/sablier-caddy-plugin/issues/17)) ([968f5ec](https://github.com/sablierapp/sablier-caddy-plugin/commit/968f5ec16888a626b075cd675c57ea39ce32eb8b))
+* **deps:** bump actions/create-github-app-token from 2.1.4 to 2.2.0 ([#15](https://github.com/sablierapp/sablier-caddy-plugin/issues/15)) ([4c06e7c](https://github.com/sablierapp/sablier-caddy-plugin/commit/4c06e7c53369f23d953604a20d7d802c897b844a))
+* **deps:** bump actions/setup-go from 6.0.0 to 6.1.0 ([#16](https://github.com/sablierapp/sablier-caddy-plugin/issues/16)) ([645d091](https://github.com/sablierapp/sablier-caddy-plugin/commit/645d0916a7a9ab6f19b07a48de0bcf1768fd0d1a))
+* **deps:** bump golangci/golangci-lint-action from 9.0.0 to 9.1.0 ([#18](https://github.com/sablierapp/sablier-caddy-plugin/issues/18)) ([c317dd7](https://github.com/sablierapp/sablier-caddy-plugin/commit/c317dd758fe5c7ca9c9b64107da0616e31490e2e))
+
 ## [1.0.1](https://github.com/sablierapp/sablier-caddy-plugin/compare/v1.0.0...v1.0.1) (2025-11-09)
 
 
