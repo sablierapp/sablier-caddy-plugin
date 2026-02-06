@@ -1,0 +1,50 @@
+# This is an example compose file with all services together, it is preferable to have only sablier
+# and caddy in the same compose then separate files for your services when using caddy docker proxy.
+
+services:
+  caddy:
+    image: caddy-plugins
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./site:/srv
+      - /var/run/docker.sock:/var/run/docker.sock
+      - caddy_data:/data
+      - ./logs:/logs
+    environment:
+      - CADDY_DOCKER_SCAN_STOPPED_CONTAINERS=true
+    # This is important to avoid errors later on.
+    labels:
+      caddy.order: sablier before reverse_proxy
+
+  sablier:
+    image: sablierapp/sablier:1.10.1
+    restart: unless-stopped
+    command:
+      - start
+      - --provider.name=docker
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+
+  mimic:
+    image: sablierapp/mimic:v0.3.1
+    healthcheck:
+      test: [ "CMD", "/mimic", "healthcheck"]
+      interval: 5s
+    labels:
+      sablier.enable: true
+      sablier.group: mimic
+      caddy: :80
+      caddy.route: /*
+      caddy.route.sablier: "http://sablier:10000"
+      caddy.route.sablier.group: mimic
+      caddy.route.sablier.session_duration: 1m
+      caddy.route.sablier.dynamic.display_name: Mimic
+      caddy.route.sablier.dynamic.theme: hacker-terminal
+      caddy.route.reverse_proxy: mimic:80
