@@ -44,6 +44,24 @@ func (m *SablierMiddleware) Provision(ctx caddy.Context) error {
 func (sm SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request, next caddyhttp.Handler) error {
 	sablierRequest := sm.request.Clone(context.TODO())
 
+	// Expand Caddy placeholders (e.g. {labels.3}) in query parameters at request time
+	if repl, ok := req.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer); ok && repl != nil {
+		q := sablierRequest.URL.Query()
+		if names, exists := q["names"]; exists {
+			q.Del("names")
+			for _, name := range names {
+				if expanded := repl.ReplaceAll(name, ""); expanded != "" {
+					q.Add("names", expanded)
+				}
+			}
+			sablierRequest.URL.RawQuery = q.Encode()
+		}
+		if group := q.Get("group"); group != "" {
+			q.Set("group", repl.ReplaceAll(group, ""))
+			sablierRequest.URL.RawQuery = q.Encode()
+		}
+	}
+
 	resp, err := sm.client.Do(sablierRequest)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
