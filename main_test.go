@@ -1,6 +1,7 @@
 package caddy_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -109,5 +110,49 @@ func TestSablierMiddleware_ServeHTTP(t *testing.T) {
 				t.Errorf("expected %s got %v", tt.expected, string(data))
 			}
 		})
+	}
+}
+
+func TestSablierMiddleware_ServeHTTP_PlaceholderExpansion(t *testing.T) {
+	var receivedNames []string
+	sablierMockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedNames = r.URL.Query()["names"]
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer sablierMockServer.Close()
+
+	sm := &plugin.SablierMiddleware{
+		Config: plugin.Config{
+			SablierURL:      sablierMockServer.URL,
+			Names:           []string{"nginx", "{http.request.host.labels.3}"},
+			SessionDuration: &oneMinute,
+			Dynamic:         &plugin.DynamicConfiguration{},
+		},
+	}
+
+	err := sm.Provision(caddy.Context{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	next := caddyhttp.HandlerFunc(func(w http.ResponseWriter, r *http.Request) error {
+		return nil
+	})
+
+	// Request to "myapp.sub.example.com" => labels.3 = "myapp"
+	req := httptest.NewRequest(http.MethodGet, "http://myapp.sub.example.com/", nil)
+	repl := caddy.NewReplacer()
+	ctx := context.WithValue(req.Context(), caddy.ReplacerCtxKey, repl)
+	req = req.WithContext(ctx)
+	caddyhttp.PrepareRequest(req, repl, nil, nil)
+
+	w := httptest.NewRecorder()
+	err = sm.ServeHTTP(w, req, next)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(receivedNames) != 2 || receivedNames[0] != "nginx" || receivedNames[1] != "myapp" {
+		t.Errorf("expected names=[nginx myapp], got names=%v", receivedNames)
 	}
 }
