@@ -55,6 +55,7 @@ You can have the following configuration:
 				[show_details yes|true|on]
 				[theme hacker-terminal]
 				[refresh_frequency 2s]
+				[ready_on_start]
 			}
 			blocking {
 				[timeout 1m]
