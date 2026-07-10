@@ -22,6 +22,7 @@ type DynamicConfiguration struct {
 	ShowDetails      *bool
 	Theme            string
 	RefreshFrequency *time.Duration
+	ReadyOnStart     *bool
 }
 
 type BlockingConfiguration struct {
@@ -58,6 +59,7 @@ func CreateConfig() *Config {
 //				[show_details yes|true|on]
 //				[theme hacker-terminal]
 //				[refresh_frequency 2s]
+//				[ready_on_start]
 //			}
 //			blocking {
 //				[timeout 1m]
@@ -155,6 +157,9 @@ func parseDynamic(d *caddyfile.Dispenser) (*DynamicConfiguration, error) {
 				return nil, err
 			}
 			conf.RefreshFrequency = &duration
+		case "ready_on_start":
+			shouldReady := isEnabledArg(args)
+			conf.ReadyOnStart = &shouldReady
 		}
 	}
 	return conf, nil
@@ -237,6 +242,10 @@ func (c *Config) buildDynamicRequest() (*http.Request, error) {
 
 	if c.Dynamic.ShowDetails != nil {
 		q.Add("show_details", strconv.FormatBool(*c.Dynamic.ShowDetails))
+	}
+
+	if c.Dynamic.ReadyOnStart != nil {
+		q.Add("ready_on_start", strconv.FormatBool(*c.Dynamic.ReadyOnStart))
 	}
 
 	request.URL.RawQuery = q.Encode()
