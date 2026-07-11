@@ -24,6 +24,17 @@ func TestConfig_BuildRequest(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			name: "poke session with names",
+			fields: caddy.Config{
+				SablierURL:      "http://sablier:10000",
+				Names:           []string{"nginx", "apache"},
+				SessionDuration: &oneMinute,
+				Poke:            &caddy.PokeConfiguration{},
+			},
+			want:    createRequest("GET", "http://sablier:10000/api/strategies/poke?names=nginx&names=apache&session_duration=1m", nil),
+			wantErr: false,
+		},
+		{
 			name: "dynamic session with required values",
 			fields: caddy.Config{
 
@@ -193,6 +204,7 @@ func TestConfig_BuildRequest(t *testing.T) {
 				SessionDuration: tt.fields.SessionDuration,
 				Dynamic:         tt.fields.Dynamic,
 				Blocking:        tt.fields.Blocking,
+				Poke:            tt.fields.Poke,
 			}
 
 			got, err := c.BuildRequest()
@@ -309,19 +321,48 @@ func TestConfig_UnmarshalCaddyfile(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "parse valid poke strategy",
+			input: `sablier {
+				group mygroup
+				session_duration 1m
+				poke
+			}`,
+			want: caddy.Config{
+				SablierURL:      "http://sablier:10000",
+				Group:           "mygroup",
+				SessionDuration: &oneMinute,
+				Poke:            &caddy.PokeConfiguration{},
+			},
+			wantErr: false,
+		},
+		{
 			name:  "parse invalid no strategies",
 			input: `sablier`,
 			want: caddy.Config{
 				SablierURL: "http://sablier:10000",
 			},
 			wantErr:      true,
-			wantErrValue: "you must specify one strategy (dynamic or blocking)",
+			wantErrValue: "you must specify one strategy (dynamic, blocking or poke)",
 		},
 		{
-			name: "parse invalid two strategies",
+			name: "parse invalid two strategies dynamic-blocking",
 			input: `sablier {
 				blocking 
 				dynamic
+			}`,
+			want: caddy.Config{
+				SablierURL: "http://sablier:10000",
+			},
+			wantErr:      true,
+			wantErrValue: "you must specify only one strategy",
+		},
+		{
+			name: "parse invalid two strategies poke-blocking",
+			input: `sablier {
+				poke
+				blocking {
+					timeout 1m
+				}
 			}`,
 			want: caddy.Config{
 				SablierURL: "http://sablier:10000",
