@@ -1,7 +1,6 @@
 package caddy
 
 import (
-	"context"
 	"io"
 	"net/http"
 
@@ -42,7 +41,16 @@ func (m *SablierMiddleware) Provision(ctx caddy.Context) error {
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
 func (sm SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request, next caddyhttp.Handler) error {
-	sablierRequest := sm.request.Clone(context.TODO())
+	sablierRequest := sm.request.Clone(req.Context())
+
+	// Forward content-negotiation headers so Sablier can return the appropriate
+	// content type (e.g. themed HTML error pages for browsers vs RFC 7807 JSON for API clients).
+	if accept := req.Header.Get("Accept"); accept != "" {
+		sablierRequest.Header.Set("Accept", accept)
+	}
+	if acceptLang := req.Header.Get("Accept-Language"); acceptLang != "" {
+		sablierRequest.Header.Set("Accept-Language", acceptLang)
+	}
 
 	// Expand Caddy placeholders (e.g. {labels.3}) in query parameters at request time
 	if repl, ok := req.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer); ok && repl != nil {
@@ -80,6 +88,7 @@ func (sm SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request,
 func forward(resp *http.Response, rw http.ResponseWriter) error {
 	rw.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
 	rw.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
+	rw.WriteHeader(resp.StatusCode)
 	_, err := io.Copy(rw, resp.Body)
 	return err
 }

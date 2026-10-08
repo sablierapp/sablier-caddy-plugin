@@ -139,7 +139,7 @@ func TestSablierMiddleware_ServeHTTP_PlaceholderExpansion(t *testing.T) {
 		return nil
 	})
 
-	// Request to "myapp.sub.example.com" => labels.3 = "myapp"
+	// Request to \"myapp.sub.example.com\" => labels.3 = \"myapp\"
 	req := httptest.NewRequest(http.MethodGet, "http://myapp.sub.example.com/", nil)
 	repl := caddy.NewReplacer()
 	ctx := context.WithValue(req.Context(), caddy.ReplacerCtxKey, repl)
@@ -154,5 +154,65 @@ func TestSablierMiddleware_ServeHTTP_PlaceholderExpansion(t *testing.T) {
 
 	if len(receivedNames) != 2 || receivedNames[0] != "nginx" || receivedNames[1] != "myapp" {
 		t.Errorf("expected names=[nginx myapp], got names=%v", receivedNames)
+	}
+}
+
+func TestSablierMiddleware_ServeHTTP_ContentNegotiationAndStatusCode(t *testing.T) {
+	var receivedAccept string
+	var receivedAcceptLanguage string
+
+	sablierMockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedAccept = r.Header.Get("Accept")
+		receivedAcceptLanguage = r.Header.Get("Accept-Language")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte("<html>Error Page</html>"))
+	}))
+	defer sablierMockServer.Close()
+
+	sm := &plugin.SablierMiddleware{
+		Config: plugin.Config{
+			SablierURL:      sablierMockServer.URL,
+			Names:           []string{"test-service"},
+			SessionDuration: &oneMinute,
+			Dynamic:         &plugin.DynamicConfiguration{},
+		},
+	}
+
+	err := sm.Provision(caddy.Context{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	next := caddyhttp.HandlerFunc(func(w http.ResponseWriter, r *http.Request) error {
+		return nil
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
+	req.Header.Set("Accept", "text/html,application/xhtml+xml")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+
+	w := httptest.NewRecorder()
+	err = sm.ServeHTTP(w, req, next)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	if receivedAccept != "text/html,application/xhtml+xml" {
+		t.Errorf("expected Accept header to be forwarded, got %q", receivedAccept)
+	}
+	if receivedAcceptLanguage != "en-US,en;q=0.9" {
+		t.Errorf("expected Accept-Language header to be forwarded, got %q", receivedAcceptLanguage)
+	}
+	if res.StatusCode != http.StatusNotFound {
+		t.Errorf("expected status code %d, got %d", http.StatusNotFound, res.StatusCode)
+	}
+
+	body, _ := io.ReadAll(res.Body)
+	if string(body) != "<html>Error Page</html>" {
+		t.Errorf("expected body <html>Error Page</html>, got %q", string(body))
 	}
 }
