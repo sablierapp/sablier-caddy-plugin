@@ -1,9 +1,9 @@
 package caddy
 
 import (
-	"context"
 	"io"
 	"net/http"
+	"slices"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
@@ -42,7 +42,11 @@ func (m *SablierMiddleware) Provision(ctx caddy.Context) error {
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
 func (sm SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request, next caddyhttp.Handler) error {
-	sablierRequest := sm.request.Clone(context.TODO())
+	sablierRequest := sm.request.Clone(req.Context())
+
+	if values := req.Header["Accept"]; len(values) > 0 {
+		sablierRequest.Header["Accept"] = slices.Clone(values)
+	}
 
 	// Expand Caddy placeholders (e.g. {labels.3}) in query parameters at request time
 	if repl, ok := req.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer); ok && repl != nil {
@@ -80,6 +84,8 @@ func (sm SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request,
 func forward(resp *http.Response, rw http.ResponseWriter) error {
 	rw.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
 	rw.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
+
+	rw.WriteHeader(resp.StatusCode)
 	_, err := io.Copy(rw, resp.Body)
 	return err
 }
