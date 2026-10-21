@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.3](https://github.com/sablierapp/sablier-caddy-plugin/compare/v1.0.2...v1.0.3) (2026-10-21)
+
+
+### Chores
+
+* **deps:** bump actions/checkout from 6.0.2 to 7.0.0 ([#46](https://github.com/sablierapp/sablier-caddy-plugin/issues/46)) ([4ee8a7e](https://github.com/sablierapp/sablier-caddy-plugin/commit/4ee8a7e1a567ab42f922af3b4d60518de1a9d773))
+* **deps:** bump actions/checkout from 7.0.0 to 7.0.1 ([#53](https://github.com/sablierapp/sablier-caddy-plugin/issues/53)) ([492fdd5](https://github.com/sablierapp/sablier-caddy-plugin/commit/492fdd5124ed832fa5e43de7e3a27be2a0a57a98))
+* **deps:** bump actions/create-github-app-token from 3.0.0 to 3.2.0 ([#40](https://github.com/sablierapp/sablier-caddy-plugin/issues/40)) ([1c4349e](https://github.com/sablierapp/sablier-caddy-plugin/commit/1c4349e2ba3603bc0f045e5af256da6201b647f4))
+* **deps:** bump actions/create-github-app-token from 3.2.0 to 3.3.0 ([#58](https://github.com/sablierapp/sablier-caddy-plugin/issues/58)) ([f81f94d](https://github.com/sablierapp/sablier-caddy-plugin/commit/f81f94dd7dcc6d72190d5307114c70de149ea8e1))
+* **deps:** bump actions/setup-go from 6.4.0 to 6.5.0 ([#48](https://github.com/sablierapp/sablier-caddy-plugin/issues/48)) ([dc53a4c](https://github.com/sablierapp/sablier-caddy-plugin/commit/dc53a4c93a422df568ef36e19326c7558201dc63))
+* **deps:** bump actions/setup-go from 6.5.0 to 7.0.0 ([#52](https://github.com/sablierapp/sablier-caddy-plugin/issues/52)) ([3e59cae](https://github.com/sablierapp/sablier-caddy-plugin/commit/3e59caefeddbeb5c1e1ec9d18091b525512b20cd))
+* **deps:** bump caddy from 2.11.2 to 2.11.4 ([#44](https://github.com/sablierapp/sablier-caddy-plugin/issues/44)) ([a76e630](https://github.com/sablierapp/sablier-caddy-plugin/commit/a76e6301c538f891a9e96771359826ef3cdd6ce3))
+* **deps:** bump caddy from 2.11.4 to 2.11.7 ([#56](https://github.com/sablierapp/sablier-caddy-plugin/issues/56)) ([7446359](https://github.com/sablierapp/sablier-caddy-plugin/commit/7446359834bb26d1b44f39710795da8456b2bd02))
+* **deps:** bump github.com/caddyserver/caddy/v2 from 2.11.2 to 2.11.4 ([#45](https://github.com/sablierapp/sablier-caddy-plugin/issues/45)) ([9378db4](https://github.com/sablierapp/sablier-caddy-plugin/commit/9378db48e2b1adf9117d4d06a731b792d728c001))
+* **deps:** bump golangci/golangci-lint-action from 9.2.0 to 9.3.0 ([#47](https://github.com/sablierapp/sablier-caddy-plugin/issues/47)) ([680aac3](https://github.com/sablierapp/sablier-caddy-plugin/commit/680aac384d2586ee2e4ae5bbb515dcb1887bda19))
+* **deps:** bump googleapis/release-please-action from 4.4.0 to 5.0.0 ([#36](https://github.com/sablierapp/sablier-caddy-plugin/issues/36)) ([c3f95ad](https://github.com/sablierapp/sablier-caddy-plugin/commit/c3f95ad96d928ffdd9bca892ad802f09d2ae2418))
+
 ## [1.0.2](https://github.com/sablierapp/sablier-caddy-plugin/compare/v1.0.1...v1.0.2) (2026-04-02)
 
 
