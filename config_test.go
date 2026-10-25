@@ -139,6 +139,18 @@ func TestConfig_BuildRequest(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "dynamic session with readyOnStart",
+			fields: caddy.Config{
+				SablierURL: "http://sablier:10000",
+				Names:      []string{"nginx"},
+				Dynamic: &caddy.DynamicConfiguration{
+					ReadyOnStart: &tru,
+				},
+			},
+			want:    createRequest("GET", "http://sablier:10000/api/strategies/dynamic?names=nginx&ready_on_start=true", nil),
+			wantErr: false,
+		},
+		{
 			name: "blocking session with required values",
 			fields: caddy.Config{
 				SablierURL: "http://sablier:10000",
@@ -249,6 +261,7 @@ func TestConfig_UnmarshalCaddyfile(t *testing.T) {
 					show_details on
 					theme hacker-terminal
 					refresh_frequency 1m
+					ready_on_start
 				}
 			}`,
 			want: caddy.Config{
@@ -260,6 +273,7 @@ func TestConfig_UnmarshalCaddyfile(t *testing.T) {
 					ShowDetails:      &tru,
 					Theme:            "hacker-terminal",
 					RefreshFrequency: &oneMinute,
+					ReadyOnStart:     &tru,
 				},
 			},
 			wantErr: false,
