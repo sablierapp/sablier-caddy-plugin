@@ -2,10 +2,12 @@ package caddy_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 
 	"github.com/caddyserver/caddy/v2"
@@ -155,4 +157,63 @@ func TestSablierMiddleware_ServeHTTP_PlaceholderExpansion(t *testing.T) {
 	if len(receivedNames) != 2 || receivedNames[0] != "nginx" || receivedNames[1] != "myapp" {
 		t.Errorf("expected names=[nginx myapp], got names=%v", receivedNames)
 	}
+}
+
+func TestSablierMiddleware_ServeHTTP_NegotiatedErrorResponse(t *testing.T) {
+	sablierMockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		want := []string{"application/json;q=0.5", "text/html;q=0.9"}
+		if got := r.Header.Values("Accept"); !slices.Equal(got, want) {
+			t.Errorf("expected Accept %v, got %v", want, got)
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte("<html>Error Page</html>"))
+	}))
+	defer sablierMockServer.Close()
+
+	sm := &plugin.SablierMiddleware{
+		Config: plugin.Config{
+			SablierURL:      sablierMockServer.URL,
+			Names:           []string{"test-service"},
+			SessionDuration: &oneMinute,
+			Dynamic:         &plugin.DynamicConfiguration{},
+		},
+	}
+	if err := sm.Provision(caddy.Context{}); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
+	req.Header.Add("Accept", "application/json;q=0.5")
+	req.Header.Add("Accept", "text/html;q=0.9")
+	next := caddyhttp.HandlerFunc(func(w http.ResponseWriter, r *http.Request) error {
+		t.Error("non-ready response must not reach the backend")
+		return nil
+	})
+
+	w := httptest.NewRecorder()
+	if err := sm.ServeHTTP(w, req, next); err != nil {
+		t.Fatal(err)
+	}
+
+	res := w.Result()
+	//nolint:errcheck
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusNotFound {
+		t.Errorf("expected status %d, got %d", http.StatusNotFound, res.StatusCode)
+	}
+	if got := res.Header.Get("Content-Type"); got != "text/html; charset=utf-8" {
+		t.Errorf("expected Content-Type text/html; charset=utf-8, got %q", got)
+	}
+	if got := w.Body.String(); got != "<html>Error Page</html>" {
+		t.Errorf("expected body <html>Error Page</html>, got %q", got)
+	}
+
+	t.Run("canceled request", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(req.Context())
+		cancel()
+		if err := sm.ServeHTTP(httptest.NewRecorder(), req.WithContext(ctx), next); !errors.Is(err, context.Canceled) {
+			t.Errorf("expected context.Canceled, got %v", err)
+		}
+	})
 }
