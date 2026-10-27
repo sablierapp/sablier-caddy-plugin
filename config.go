@@ -28,6 +28,9 @@ type BlockingConfiguration struct {
 	Timeout *time.Duration
 }
 
+type PokeConfiguration struct {
+}
+
 type Config struct {
 	SablierURL      string
 	Names           []string
@@ -35,6 +38,7 @@ type Config struct {
 	SessionDuration *time.Duration
 	Dynamic         *DynamicConfiguration
 	Blocking        *BlockingConfiguration
+	Poke            *PokeConfiguration
 }
 
 func CreateConfig() *Config {
@@ -44,6 +48,7 @@ func CreateConfig() *Config {
 		SessionDuration: nil,
 		Dynamic:         nil,
 		Blocking:        nil,
+		Poke:            nil,
 	}
 }
 
@@ -62,6 +67,7 @@ func CreateConfig() *Config {
 //			blocking {
 //				[timeout 1m]
 //			}
+//			poke
 //		}
 //
 func (c *Config) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
@@ -100,15 +106,26 @@ func (c *Config) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return err
 				}
 				c.Blocking = blocking
+			case "poke":
+				c.Poke = &PokeConfiguration{}
 			}
 		}
 	}
 
-	if c.Blocking == nil && c.Dynamic == nil {
-		return fmt.Errorf("you must specify one strategy (dynamic or blocking)")
+	strategyCount := 0
+	if c.Blocking != nil {
+		strategyCount++
 	}
-
-	if c.Blocking != nil && c.Dynamic != nil {
+	if c.Dynamic != nil {
+		strategyCount++
+	}
+	if c.Poke != nil {
+		strategyCount++
+	}
+	if strategyCount == 0 {
+		return fmt.Errorf("you must specify one strategy (dynamic, blocking or poke)")
+	}
+	if strategyCount > 1 {
 		return fmt.Errorf("you must specify only one strategy")
 	}
 
@@ -195,6 +212,8 @@ func (c *Config) BuildRequest() (*http.Request, error) {
 		return c.buildDynamicRequest()
 	} else if c.Blocking != nil {
 		return c.buildBlockingRequest()
+	} else if c.Poke != nil {
+		return c.buildPokeRequest()
 	}
 	return nil, fmt.Errorf("no strategy configured")
 }
@@ -270,6 +289,35 @@ func (c *Config) buildBlockingRequest() (*http.Request, error) {
 
 	if c.Blocking.Timeout != nil {
 		q.Add("timeout", c.Blocking.Timeout.String())
+	}
+
+	request.URL.RawQuery = q.Encode()
+
+	return request, nil
+}
+
+func (c *Config) buildPokeRequest() (*http.Request, error) {
+	if c.Poke == nil {
+		return nil, fmt.Errorf("poke config is nil")
+	}
+
+	request, err := http.NewRequest("GET", fmt.Sprintf("%s/api/strategies/poke", c.SablierURL), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	q := request.URL.Query()
+
+	if c.SessionDuration != nil {
+		q.Add("session_duration", c.SessionDuration.String())
+	}
+
+	for _, name := range c.Names {
+		q.Add("names", name)
+	}
+
+	if c.Group != "" {
+		q.Add("group", c.Group)
 	}
 
 	request.URL.RawQuery = q.Encode()

@@ -59,6 +59,7 @@ You can have the following configuration:
 			blocking {
 				[timeout 1m]
 			}
+			poke
 		}
     reverse_proxy myservice:port
   }

@@ -70,7 +70,7 @@ func (sm SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request,
 	//nolint:errcheck
 	defer resp.Body.Close()
 
-	if resp.Header.Get("X-Sablier-Session-Status") == "ready" {
+	if resp.Header.Get("X-Sablier-Session-Status") == "ready" || sm.Config.Poke != nil {
 		return next.ServeHTTP(rw, req)
 	}
 
