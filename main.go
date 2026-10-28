@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
@@ -33,7 +34,14 @@ func (m *SablierMiddleware) Provision(ctx caddy.Context) error {
 		return fmt.Errorf("no strategy configured")
 	}
 
-	sablier, err := client.New(m.Config.SablierURL)
+	sablierURL := m.Config.SablierURL
+	if !strings.Contains(sablierURL, "://") {
+		// Accept host:port, as the proxy-wasm plugin does: the client needs a
+		// scheme, and Sablier is usually reached over plain http.
+		sablierURL = "http://" + sablierURL
+	}
+
+	sablier, err := client.New(sablierURL)
 	if err != nil {
 		return err
 	}

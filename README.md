@@ -65,6 +65,8 @@ You can have the following configuration:
 }
 ```
 
+The scheme of `<sablierURL>` is optional: `sablier:10000` means `http://sablier:10000`.
+
 ### Minimal configuration
 
 Almost all options are optional and you can setup very simple rules to use the server default values.
