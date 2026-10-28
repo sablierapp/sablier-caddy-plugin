@@ -70,6 +70,9 @@ func (sm SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request,
 func forward(resp *client.Response, rw http.ResponseWriter) error {
 	rw.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
 	rw.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
+	// The waiting page is served at the user's URL: a stored copy would keep
+	// showing once the instances are ready.
+	rw.Header().Set("Cache-Control", "no-store")
 	rw.WriteHeader(resp.StatusCode)
 	_, err := rw.Write(resp.Body)
 	return err

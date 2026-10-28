@@ -162,6 +162,33 @@ func TestSablierResponseIsForwarded(t *testing.T) {
 	}
 }
 
+// TestWaitingPageIsNotCached checks that the waiting page, served at the
+// user's own URL, is never stored: a cached copy would keep showing after the
+// instances are ready.
+func TestWaitingPageIsNotCached(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("X-Sablier-Session-Status", "not-ready")
+		_, _ = w.Write([]byte("<html>waiting</html>"))
+	}))
+	defer srv.Close()
+
+	sm := &plugin.SablierMiddleware{Config: plugin.Config{SablierURL: srv.URL, Group: "demo", Dynamic: &plugin.DynamicConfiguration{}}}
+	if err := sm.Provision(caddy.Context{}); err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	next := caddyhttp.HandlerFunc(func(http.ResponseWriter, *http.Request) error { return nil })
+	if err := sm.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil), next); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+		t.Errorf("Cache-Control = %q, want no-store", got)
+	}
+}
+
 // TestSablierURLWithoutScheme checks that a Sablier URL given as host:port,
 // without http://, is reached over http.
 func TestSablierURLWithoutScheme(t *testing.T) {
