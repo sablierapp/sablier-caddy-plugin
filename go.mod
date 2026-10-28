@@ -2,7 +2,10 @@ module github.com/sablierapp/sablier-caddy-plugin
 
 go 1.26.0
 
-require github.com/caddyserver/caddy/v2 v2.11.7
+require (
+	github.com/caddyserver/caddy/v2 v2.11.7
+	github.com/sablierapp/sablier/client v0.1.0
+)
 
 require (
 	cel.dev/cel-go v0.32.0 // indirect
