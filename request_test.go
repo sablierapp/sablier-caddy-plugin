@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
@@ -186,6 +187,47 @@ func TestWaitingPageIsNotCached(t *testing.T) {
 
 	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
 		t.Errorf("Cache-Control = %q, want no-store", got)
+	}
+}
+
+// TestClientDisconnectCancelsSablierCall checks that the call to Sablier
+// follows the incoming request: when the client goes away during a blocking
+// wait, the plugin stops waiting instead of holding the call open until
+// Sablier's timeout.
+func TestClientDisconnectCancelsSablierCall(t *testing.T) {
+	sablierCancelled := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done() // a blocking wait that never ends on its own
+		close(sablierCancelled)
+	}))
+	defer srv.Close()
+	defer srv.CloseClientConnections() // unblock the handler if the test fails
+
+	sm := &plugin.SablierMiddleware{Config: plugin.Config{SablierURL: srv.URL, Group: "demo", Blocking: &plugin.BlockingConfiguration{}}}
+	if err := sm.Provision(caddy.Context{}); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	req := httptest.NewRequest(http.MethodGet, "/", nil).WithContext(ctx)
+	next := caddyhttp.HandlerFunc(func(http.ResponseWriter, *http.Request) error { return nil })
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = sm.ServeHTTP(httptest.NewRecorder(), req, next)
+	}()
+	time.Sleep(50 * time.Millisecond) // let the call reach Sablier
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("ServeHTTP still waiting on Sablier 5s after the client went away")
+	}
+	select {
+	case <-sablierCancelled:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the call to Sablier was not cancelled")
 	}
 }
 
