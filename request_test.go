@@ -127,7 +127,8 @@ func TestSablierRequest(t *testing.T) {
 }
 
 // TestSablierResponseIsForwarded pins what the client receives while the
-// session is not ready: Sablier's body and Content-Type.
+// session is not ready: Sablier's status code, body and Content-Type, so an
+// error such as an unknown group or a blocking timeout is not served as 200.
 func TestSablierResponseIsForwarded(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/problem+json")
@@ -149,8 +150,8 @@ func TestSablierResponseIsForwarded(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("status = %d, want %d", rec.Code, http.StatusOK)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want Sablier's %d", rec.Code, http.StatusNotFound)
 	}
 	if got := rec.Header().Get("Content-Type"); got != "application/problem+json" {
 		t.Errorf("Content-Type = %q, want application/problem+json", got)

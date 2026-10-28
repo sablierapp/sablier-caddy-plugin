@@ -62,6 +62,7 @@ func (sm SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request,
 func forward(resp *client.Response, rw http.ResponseWriter) error {
 	rw.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
 	rw.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
+	rw.WriteHeader(resp.StatusCode)
 	_, err := rw.Write(resp.Body)
 	return err
 }
