@@ -1,7 +1,6 @@
 package caddy
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
@@ -46,7 +45,7 @@ func (m *SablierMiddleware) Provision(ctx caddy.Context) error {
 func (sm SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request, next caddyhttp.Handler) error {
 	repl, _ := req.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 
-	resp, err := sm.Config.start(context.TODO(), sm.sablier, repl)
+	resp, err := sm.Config.start(req.Context(), sm.sablier, repl)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return err
