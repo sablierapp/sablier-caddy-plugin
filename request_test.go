@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/caddyserver/caddy/v2"
@@ -185,5 +186,35 @@ func TestWaitingPageIsNotCached(t *testing.T) {
 
 	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
 		t.Errorf("Cache-Control = %q, want no-store", got)
+	}
+}
+
+// TestSablierURLWithoutScheme checks that a Sablier URL given as host:port,
+// without http://, is reached over http.
+func TestSablierURLWithoutScheme(t *testing.T) {
+	var path string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path = r.URL.Path
+		w.Header().Set("X-Sablier-Session-Status", "ready")
+	}))
+	defer srv.Close()
+	hostPort := strings.TrimPrefix(srv.URL, "http://")
+	_, port, _ := strings.Cut(hostPort, ":")
+
+	for _, sablierURL := range []string{hostPort, "localhost:" + port} {
+		sm := &plugin.SablierMiddleware{Config: plugin.Config{SablierURL: sablierURL, Group: "demo", Dynamic: &plugin.DynamicConfiguration{}}}
+		if err := sm.Provision(caddy.Context{}); err != nil {
+			t.Errorf("SablierURL %q: %v", sablierURL, err)
+			continue
+		}
+		path = ""
+		next := caddyhttp.HandlerFunc(func(http.ResponseWriter, *http.Request) error { return nil })
+		if err := sm.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil), next); err != nil {
+			t.Errorf("SablierURL %q: %v", sablierURL, err)
+			continue
+		}
+		if path != "/api/strategies/dynamic" {
+			t.Errorf("SablierURL %q: Sablier received path %q, want /api/strategies/dynamic", sablierURL, path)
+		}
 	}
 }
