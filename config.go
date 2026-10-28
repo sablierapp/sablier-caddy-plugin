@@ -1,15 +1,16 @@
 package caddy
 
 import (
+	"context"
 	"fmt"
-	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"github.com/sablierapp/sablier/client"
 )
 
 func init() {
@@ -190,89 +191,66 @@ func isEnabledArg(s string) bool {
 	return false
 }
 
-func (c *Config) BuildRequest() (*http.Request, error) {
+// start calls the configured strategy for one incoming request. Caddy
+// placeholders (e.g. {labels.3}) in names and group are expanded with repl,
+// and names that expand to nothing are dropped.
+func (c *Config) start(ctx context.Context, sablier *client.Client, repl *caddy.Replacer) (*client.Response, error) {
+	names, group := c.Names, c.Group
+	if repl != nil {
+		names = make([]string, 0, len(c.Names))
+		for _, name := range c.Names {
+			if expanded := repl.ReplaceAll(name, ""); expanded != "" {
+				names = append(names, expanded)
+			}
+		}
+		group = repl.ReplaceAll(c.Group, "")
+	}
+
+	var sessionDuration *string
+	if c.SessionDuration != nil {
+		sessionDuration = ptr(c.SessionDuration.String())
+	}
+
 	if c.Dynamic != nil {
-		return c.buildDynamicRequest()
-	} else if c.Blocking != nil {
-		return c.buildBlockingRequest()
-	}
-	return nil, fmt.Errorf("no strategy configured")
-}
-
-func (c *Config) buildDynamicRequest() (*http.Request, error) {
-	if c.Dynamic == nil {
-		return nil, fmt.Errorf("dynamic config is nil")
-	}
-
-	request, err := http.NewRequest("GET", fmt.Sprintf("%s/api/strategies/dynamic", c.SablierURL), nil)
-	if err != nil {
-		return nil, err
+		params := client.StartDynamicParams{
+			Names:           nonEmpty(names),
+			Group:           nonEmptyString(group),
+			SessionDuration: sessionDuration,
+			DisplayName:     nonEmptyString(c.Dynamic.DisplayName),
+			Theme:           nonEmptyString(c.Dynamic.Theme),
+			ShowDetails:     c.Dynamic.ShowDetails,
+		}
+		if c.Dynamic.RefreshFrequency != nil {
+			params.RefreshFrequency = ptr(c.Dynamic.RefreshFrequency.String())
+		}
+		return sablier.StartDynamic(ctx, params)
 	}
 
-	q := request.URL.Query()
-
-	if c.SessionDuration != nil {
-		q.Add("session_duration", c.SessionDuration.String())
+	params := client.StartBlockingParams{
+		Names:           nonEmpty(names),
+		Group:           nonEmptyString(group),
+		SessionDuration: sessionDuration,
 	}
-
-	for _, name := range c.Names {
-		q.Add("names", name)
-	}
-
-	if c.Group != "" {
-		q.Add("group", c.Group)
-	}
-
-	if c.Dynamic.DisplayName != "" {
-		q.Add("display_name", c.Dynamic.DisplayName)
-	}
-
-	if c.Dynamic.Theme != "" {
-		q.Add("theme", c.Dynamic.Theme)
-	}
-
-	if c.Dynamic.RefreshFrequency != nil {
-		q.Add("refresh_frequency", c.Dynamic.RefreshFrequency.String())
-	}
-
-	if c.Dynamic.ShowDetails != nil {
-		q.Add("show_details", strconv.FormatBool(*c.Dynamic.ShowDetails))
-	}
-
-	request.URL.RawQuery = q.Encode()
-
-	return request, nil
-}
-
-func (c *Config) buildBlockingRequest() (*http.Request, error) {
-	if c.Blocking == nil {
-		return nil, fmt.Errorf("blocking config is nil")
-	}
-
-	request, err := http.NewRequest("GET", fmt.Sprintf("%s/api/strategies/blocking", c.SablierURL), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	q := request.URL.Query()
-
-	if c.SessionDuration != nil {
-		q.Add("session_duration", c.SessionDuration.String())
-	}
-
-	for _, name := range c.Names {
-		q.Add("names", name)
-	}
-
-	if c.Group != "" {
-		q.Add("group", c.Group)
-	}
-
 	if c.Blocking.Timeout != nil {
-		q.Add("timeout", c.Blocking.Timeout.String())
+		params.Timeout = ptr(c.Blocking.Timeout.String())
 	}
+	return sablier.StartBlocking(ctx, params)
+}
 
-	request.URL.RawQuery = q.Encode()
+func ptr[T any](v T) *T { return &v }
 
-	return request, nil
+// nonEmpty and nonEmptyString leave unset parameters out of the request, so
+// Sablier applies its defaults.
+func nonEmpty(values []string) *[]string {
+	if len(values) == 0 {
+		return nil
+	}
+	return &values
+}
+
+func nonEmptyString(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }
