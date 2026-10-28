@@ -2,6 +2,7 @@ package caddy_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -228,6 +229,35 @@ func TestClientDisconnectCancelsSablierCall(t *testing.T) {
 	case <-sablierCancelled:
 	case <-time.After(5 * time.Second):
 		t.Fatal("the call to Sablier was not cancelled")
+	}
+}
+
+// TestUnreachableSablierIsACaddyError checks that a failed call to Sablier
+// is handed to Caddy as a 500 handler error, without writing a response:
+// Caddy's error handling (handle_errors) decides what the client sees, and
+// the internal error, which names the Sablier address, is not sent to it.
+func TestUnreachableSablierIsACaddyError(t *testing.T) {
+	srv := httptest.NewServer(http.NotFoundHandler())
+	srv.Close()
+
+	sm := &plugin.SablierMiddleware{Config: plugin.Config{SablierURL: srv.URL, Group: "demo", Dynamic: &plugin.DynamicConfiguration{}}}
+	if err := sm.Provision(caddy.Context{}); err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	next := caddyhttp.HandlerFunc(func(http.ResponseWriter, *http.Request) error { return nil })
+
+	err := sm.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil), next)
+
+	var handlerErr caddyhttp.HandlerError
+	if !errors.As(err, &handlerErr) {
+		t.Fatalf("err = %v, want a caddyhttp.HandlerError", err)
+	}
+	if handlerErr.StatusCode != http.StatusInternalServerError {
+		t.Errorf("status = %d, want %d", handlerErr.StatusCode, http.StatusInternalServerError)
+	}
+	if rec.Body.Len() != 0 || len(rec.Header()) != 0 {
+		t.Errorf("a response was written (headers %v, body %q); Caddy must write it", rec.Header(), rec.Body.String())
 	}
 }
 

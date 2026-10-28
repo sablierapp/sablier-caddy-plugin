@@ -55,8 +55,9 @@ func (sm SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request,
 
 	resp, err := sm.Config.start(req.Context(), sm.sablier, repl)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return err
+		// Let Caddy's error handling write the response: the error names the
+		// Sablier address, which clients must not see.
+		return caddyhttp.Error(http.StatusInternalServerError, err)
 	}
 
 	if resp.Ready() {
